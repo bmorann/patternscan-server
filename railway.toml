@@ -1,0 +1,18 @@
+# Railway deployment — https://railway.app
+# 1. Push this folder to a GitHub repo
+# 2. Go to railway.app → New Project → Deploy from GitHub
+# 3. Select your repo — Railway auto-detects Node.js
+# 4. Set environment variables in Railway dashboard:
+#      WEBHOOK_SECRET=your_secret_here   (optional but recommended)
+# 5. Railway gives you a public URL like:
+#      https://patternscan-production.up.railway.app
+# 6. Use that URL as your TradingView webhook:
+#      https://patternscan-production.up.railway.app/webhook
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
