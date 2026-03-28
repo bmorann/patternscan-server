@@ -119,12 +119,7 @@ app.get("/health", (req, res) => {
     uptime:   process.uptime(),
   });
 });
-app.get('/download/App.js', (req, res) => {
-  const fs = require('fs');
-  const path = require('path');
-  res.setHeader('Content-Type', 'text/plain');
-  res.send(fs.readFileSync(path.join(__dirname, 'App.js'), 'utf8'));
-});
+
 // ── Start ────────────────────────────────────────────────────
 server.listen(PORT, () => {
   console.log(`
@@ -139,4 +134,46 @@ server.listen(PORT, () => {
 ║  GET   /health    ← Status check         ║
 ╚══════════════════════════════════════════╝
   `);
+});
+
+// ── Live price proxy ───────────────────────────────────────────
+const https_mod = require("https");
+
+app.get("/prices", (req, res) => {
+  const symbols = (req.query.symbols || "AAPL,TSLA,NVDA,AMD,GOOGL,AMZN,SPY,QQQ").toUpperCase();
+  const url = `https://query1.finance.yahoo.com/v8/finance/quote?symbols=${symbols}&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume,regularMarketPreviousClose,shortName`;
+  
+  const options = {
+    hostname: "query1.finance.yahoo.com",
+    path: `/v8/finance/quote?symbols=${symbols}&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume,regularMarketPreviousClose,shortName`,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+      "Accept": "application/json",
+    }
+  };
+
+  https_mod.get(options, (response) => {
+    let data = "";
+    response.on("data", chunk => data += chunk);
+    response.on("end", () => {
+      try {
+        const parsed = JSON.parse(data);
+        const results = parsed?.quoteResponse?.result || [];
+        const prices = {};
+        results.forEach(q => {
+          prices[q.symbol] = {
+            price: q.regularMarketPrice || 0,
+            change: q.regularMarketChangePercent || 0,
+            volume: q.regularMarketVolume || 0,
+            prev: q.regularMarketPreviousClose || q.regularMarketPrice || 0,
+            name: q.shortName || q.symbol,
+          };
+        });
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.json({ ok: true, prices, updated: new Date().toISOString() });
+      } catch(e) {
+        res.json({ ok: false, error: e.message });
+      }
+    });
+  }).on("error", e => res.json({ ok: false, error: e.message }));
 });
