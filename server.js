@@ -119,7 +119,12 @@ app.get("/health", (req, res) => {
     uptime:   process.uptime(),
   });
 });
-
+app.get('/download/App.js', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  res.setHeader('Content-Type', 'text/plain');
+  res.send(fs.readFileSync(path.join(__dirname, 'App.js'), 'utf8'));
+});
 // ── Start ────────────────────────────────────────────────────
 server.listen(PORT, () => {
   console.log(`
